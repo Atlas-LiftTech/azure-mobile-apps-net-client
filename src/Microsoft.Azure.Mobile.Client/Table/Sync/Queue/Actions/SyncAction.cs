@@ -13,7 +13,7 @@ namespace Microsoft.WindowsAzure.MobileServices.Sync
     internal abstract class SyncAction
     {
         protected OperationQueue OperationQueue { get; private set; }
-        protected TaskCompletionSource<object> TaskSource { get; private set; }
+        protected TaskCompletionSource<int> TaskSource { get; private set; }
         protected IMobileServiceLocalStore Store { get; private set; }
         public CancellationToken CancellationToken { get; private set; }
 
@@ -23,7 +23,7 @@ namespace Microsoft.WindowsAzure.MobileServices.Sync
         {
             this.OperationQueue = operationQueue;
             this.Store = store;
-            this.TaskSource = new TaskCompletionSource<object>();
+            this.TaskSource = new TaskCompletionSource<int>();
             this.CancellationToken = cancellationToken;
 
             cancellationToken.Register(() => TaskSource.TrySetCanceled());

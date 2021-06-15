@@ -255,7 +255,17 @@ namespace Microsoft.WindowsAzure.MobileServices.Sync
 
         public async Task ExecuteSyncAction(SyncAction action)
         {
-            Task discard = this.syncQueue.Post(action.ExecuteAsync, action.CancellationToken);
+            Task discard;
+
+            if (action is PullAction)
+            {
+                discard = this.syncQueue.PostReadOnly(((TableAction)action).Table.TableName, action.ExecuteAsync, action.CancellationToken);
+            }
+            else
+            {
+                discard = this.syncQueue.Post(action.ExecuteAsync, action.CancellationToken);
+            }
+
             await action.CompletionTask;
         }
 

@@ -3,31 +3,31 @@
 // ----------------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.WindowsAzure.MobileServices.Threading
 {
     /// <summary>
-    /// Queue for executing asynchronous tasks in a first-in-first-out fashion.
+    /// Queue for executing asynchronous tasks in a first-in-first-out fashion per table.
     /// </summary>
-    internal class ActionBlock: IDisposable
+    internal class ActionBlock : IDisposable
     {
-        readonly AsyncLock theLock;
+        private readonly AsyncMultiReaderSingleWriterDictionary tableLocks = new AsyncMultiReaderSingleWriterDictionary();
 
-        public ActionBlock()
+        public async Task PostReadOnly(string table, Func<Task> action, CancellationToken cancellationToken)
         {
-            theLock = new AsyncLock();
+            using (await tableLocks.AcquireReadLock(table, cancellationToken))
+            {
+                await action();
+            }
         }
 
         public async Task Post(Func<Task> action, CancellationToken cancellationToken)
         {
-            using (await theLock.Acquire(cancellationToken))
+            using (await tableLocks.AcquireWriteLock(cancellationToken))
             {
-                await action(); 
+                await action();
             }
         }
 
@@ -41,8 +41,13 @@ namespace Microsoft.WindowsAzure.MobileServices.Threading
         {
             if (disposing)
             {
-                this.theLock.Dispose();
+                this.tableLocks.Dispose();
             }
+        }
+
+        public virtual Task<IDisposable> LockTableAsync(string name, CancellationToken cancellationToken)
+        {
+            return this.tableLocks.AcquireReadLock(name, cancellationToken);
         }
     }
 }
